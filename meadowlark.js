@@ -3,13 +3,21 @@ var fortune = require('./lib/fortune.js');
 
 var app = express();
 var handlebars = require('express-handlebars').create(
-  {defaultLayout:'main'
+  {defaultLayout:'main',
+  helpers: {
+    section: function(name, options){
+      if (!this._sections) this._sections={};
+      this._sections[name] = options.fn(this);
+      return null;
+      }
+  }
 });
 app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
 app.set('port', process.env.PORT || 3000);
 
 app.use(express.static(__dirname + "/public"));
+app.use(require('body-parser').urlencoded({extended:true}));
 
 app.use(function(req, res, next){
   res.locals.showTests = app.get('env') !== 'production' && req.query.test == '1';
@@ -34,6 +42,21 @@ app.get('/tours/request-group-rate', function(req, res){
   res.render('tours/request-group-rate');
 });
 
+app.get('/newsletter',function(req, res){
+  res.render('newsletter',{csrf:'csrf token goes here'});
+});
+
+app.post('/process', function(req, res){
+  if(req.xhr || req.accepts('json,html')==='json'){
+    res.send({success:true});
+  }else{
+  console.log('form(from querystring): ' + req.query.form);
+  console.log('csrf token (from hidden form field): ' + req.body._csrf);
+  console.log('Name (from visible form field): ' + req.body.name);
+  console.log('Email (from visible form field): ' + req.body.email);
+  res.redirect(303, '/thank-you')
+}
+});
 
 // 404 catch all handler(middleware)
 app.use(function(req, res, next){
